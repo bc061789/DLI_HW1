@@ -1,122 +1,389 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>HW1-2 Grid World</title>
-    <style>
-        body { font-family: "Times New Roman", serif; text-align: center; }
-        .grid { display: grid; gap: 1px; background-color: #ccc; border: 1px solid #999; margin: 10px auto; width: max-content; }
-        .cell { 
-            width: 50px; height: 50px; background-color: white; border: 1px solid #999;
-            display: flex; align-items: center; justify-content: center; position: relative;
-        }
-        .start { background-color: #008000 !important; color: white; }
-        .end { background-color: #ff0000 !important; color: white; }
-        .obstacle { background-color: #666666 !important; }
-        .result-container { display: flex; justify-content: center; gap: 50px; margin-top: 30px; }
-        .matrix-title { font-weight: bold; margin-bottom: 5px; }
-        canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
-        button { margin: 10px; cursor: pointer; padding: 5px 15px; }
-    </style>
-</head>
-<body>
-    <h1>Generate n x n Square</h1>
-    <div>
-        Enter n (5-9): <input type="number" id="gridSize" min="5" max="9" value="5">
-        <button onclick="createSetupGrid()">Generate Square</button>
-    </div>
-    <div id="setupGrid" class="grid"></div>
-    <button id="evalBtn" style="display:none;" onclick="runEvaluation()">執行策略評估 (產生雙矩陣)</button>
 
-    <div class="result-container" id="resultArea" style="display:none;">
-        <div><div class="matrix-title">Value Matrix</div><div id="valueGrid" class="grid"></div></div>
-        <div><div class="matrix-title">Policy Matrix</div><div id="policyGrid" class="grid"></div></div>
+<head>
+
+    <title>HW1 Grid World</title>
+
+    <style>
+
+        body{
+            font-family:"Times New Roman", serif;
+            text-align:center;
+            margin-top:20px;
+        }
+
+        h1{
+            margin-bottom:20px;
+        }
+
+        button{
+            padding:8px 15px;
+            margin:10px;
+            cursor:pointer;
+            font-size:16px;
+        }
+
+        input{
+            padding:5px;
+            font-size:16px;
+        }
+
+        .grid{
+            display:grid;
+            gap:1px;
+            background:#999;
+            width:max-content;
+            margin:20px auto;
+            border:1px solid #666;
+        }
+
+        .cell{
+            width:60px;
+            height:60px;
+            background:white;
+            border:1px solid #999;
+
+            display:flex;
+            justify-content:center;
+            align-items:center;
+
+            font-size:20px;
+            font-weight:bold;
+
+            position:relative;
+        }
+
+        .start{
+            background:green !important;
+            color:white;
+        }
+
+        .goal{
+            background:red !important;
+            color:white;
+        }
+
+        .obstacle{
+            background:gray !important;
+            color:white;
+        }
+
+        .container{
+            display:flex;
+            justify-content:center;
+            gap:80px;
+            margin-top:30px;
+        }
+
+        .title{
+            font-size:24px;
+            font-weight:bold;
+            margin-bottom:10px;
+        }
+
+        .value-text{
+            font-size:14px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <h1>Grid World Reinforcement Learning</h1>
+
+    <div>
+
+        Enter n (5~9):
+
+        <input
+            type="number"
+            id="gridSize"
+            min="5"
+            max="9"
+            value="5"
+        >
+
+        <button onclick="createGrid()">
+            Generate Grid
+        </button>
+
+    </div>
+
+    <div id="setupGrid" class="grid"></div>
+
+    <button
+        id="runBtn"
+        style="display:none;"
+        onclick="runEvaluation()"
+    >
+        Run Value Iteration
+    </button>
+
+    <div
+        class="container"
+        id="resultArea"
+        style="display:none;"
+    >
+
+        <div>
+
+            <div class="title">
+                Value Matrix
+            </div>
+
+            <div id="valueGrid" class="grid"></div>
+
+        </div>
+
+        <div>
+
+            <div class="title">
+                Policy Matrix
+            </div>
+
+            <div id="policyGrid" class="grid"></div>
+
+        </div>
+
     </div>
 
     <script>
-        let startIdx = null, endIdx = null, obstacles = [];
 
-        function createSetupGrid() {
-            const n = document.getElementById('gridSize').value;
-            const container = document.getElementById('setupGrid');
-            container.innerHTML = '';
-            container.style.gridTemplateColumns = `repeat(${n}, 52px)`;
-            startIdx = null; endIdx = null; obstacles = [];
-            document.getElementById('resultArea').style.display = 'none';
+        let startIdx = null
+        let goalIdx = null
+        let obstacles = []
 
-            for (let i = 0; i < n * n; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'cell'; cell.innerText = i + 1;
-                cell.onclick = () => {
-                    if (startIdx === null) { startIdx = i; cell.classList.add('start'); }
-                    else if (endIdx === null && i !== startIdx) { endIdx = i; cell.classList.add('end'); }
-                    else if (i !== startIdx && i !== endIdx) {
-                        cell.classList.toggle('obstacle');
-                        if(cell.classList.contains('obstacle')) obstacles.push(i);
-                        else obstacles = obstacles.filter(x => x !== i);
+        function createGrid(){
+
+            const n =
+                parseInt(
+                    document.getElementById("gridSize").value
+                )
+
+            const container =
+                document.getElementById("setupGrid")
+
+            container.innerHTML = ""
+
+            container.style.gridTemplateColumns =
+                `repeat(${n}, 62px)`
+
+            startIdx = null
+            goalIdx = null
+            obstacles = []
+
+            document.getElementById("resultArea")
+                .style.display = "none"
+
+            for(let i=0;i<n*n;i++){
+
+                const cell =
+                    document.createElement("div")
+
+                cell.className = "cell"
+
+                cell.innerText = i + 1
+
+                cell.onclick = function(){
+
+                    if(startIdx === null){
+
+                        startIdx = i
+                        cell.classList.add("start")
+
                     }
-                };
-                container.appendChild(cell);
-            }
-            document.getElementById('evalBtn').style.display = 'inline-block';
-        }
+                    else if(
+                        goalIdx === null &&
+                        i !== startIdx
+                    ){
 
-        async function runEvaluation() {
-            const n = document.getElementById('gridSize').value;
-            const res = await fetch('/evaluate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ n: n }) });
-            const data = await res.json();
-            document.getElementById('resultArea').style.display = 'flex';
-            renderGrid('valueGrid', n, data.values, false);
-            renderGrid('policyGrid', n, data.policy, true);
-        }
+                        goalIdx = i
+                        cell.classList.add("goal")
 
-        function renderGrid(id, n, matrixData, isPolicy) {
-            const container = document.getElementById(id);
-            container.innerHTML = '';
-            container.style.gridTemplateColumns = `repeat(${n}, 52px)`;
-            let count = 0;
-            for (let r = 0; r < n; r++) {
-                for (let c = 0; c < n; c++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'cell';
-                    if (count === startIdx) cell.classList.add('start');
-                    if (count === endIdx) cell.classList.add('end');
-                    if (obstacles.includes(count)) cell.classList.add('obstacle');
-                    
-                    if (!obstacles.includes(count)) {
-                        if (isPolicy && count !== endIdx) {
-                            const cvs = document.createElement('canvas');
-                            cvs.width = 50; cvs.height = 50;
-                            cell.appendChild(cvs);
-                            drawArrow(cvs.getContext('2d'), matrixData[r][c]);
-                        } else if (!isPolicy) {
-                            cell.innerText = matrixData[r][c];
+                    }
+                    else if(
+                        i !== startIdx &&
+                        i !== goalIdx
+                    ){
+
+                        cell.classList.toggle("obstacle")
+
+                        if(cell.classList.contains("obstacle")){
+
+                            obstacles.push(i)
+
+                        }else{
+
+                            obstacles =
+                                obstacles.filter(
+                                    x => x !== i
+                                )
                         }
                     }
-                    container.appendChild(cell);
-                    count++;
+                }
+
+                container.appendChild(cell)
+            }
+
+            document.getElementById("runBtn")
+                .style.display = "inline-block"
+        }
+
+        async function runEvaluation(){
+
+            const n =
+                parseInt(
+                    document.getElementById("gridSize").value
+                )
+
+            const response =
+                await fetch("/evaluate",{
+
+                    method:"POST",
+
+                    headers:{
+                        "Content-Type":"application/json"
+                    },
+
+                    body:JSON.stringify({
+
+                        n:n,
+
+                        start:[
+                            Math.floor(startIdx / n),
+                            startIdx % n
+                        ],
+
+                        goal:[
+                            Math.floor(goalIdx / n),
+                            goalIdx % n
+                        ],
+
+                        obstacles:
+                            obstacles.map(x => [
+                                Math.floor(x / n),
+                                x % n
+                            ])
+                    })
+                })
+
+            const data = await response.json()
+
+            document.getElementById("resultArea")
+                .style.display = "flex"
+
+            renderValueGrid(
+                n,
+                data.values
+            )
+
+            renderPolicyGrid(
+                n,
+                data.policy
+            )
+        }
+
+        function renderValueGrid(n, values){
+
+            const container =
+                document.getElementById("valueGrid")
+
+            container.innerHTML = ""
+
+            container.style.gridTemplateColumns =
+                `repeat(${n}, 62px)`
+
+            let count = 0
+
+            for(let r=0;r<n;r++){
+
+                for(let c=0;c<n;c++){
+
+                    const cell =
+                        document.createElement("div")
+
+                    cell.className = "cell"
+
+                    if(count === startIdx){
+                        cell.classList.add("start")
+                    }
+
+                    if(count === goalIdx){
+                        cell.classList.add("goal")
+                    }
+
+                    if(obstacles.includes(count)){
+                        cell.classList.add("obstacle")
+                    }
+
+                    if(!obstacles.includes(count)){
+
+                        cell.innerHTML = `
+                            <div class="value-text">
+                                ${values[r][c].toFixed(2)}
+                            </div>
+                        `
+                    }
+
+                    container.appendChild(cell)
+
+                    count++
                 }
             }
         }
 
-        function drawArrow(ctx, act) {
-            ctx.strokeStyle = "black"; ctx.lineWidth = 2;
-            const p = { 'up': [25, 8], 'down': [25, 42], 'left': [8, 25], 'right': [42, 25], 'center': [25, 25] };
-            const start = p[act.entry], end = p[act.exit], center = p['center'];
-            ctx.beginPath();
-            ctx.moveTo(start[0], start[1]);
-            if ((act.entry === 'up' && act.exit === 'down') || (act.entry === 'left' && act.exit === 'right') || 
-                (act.entry === 'down' && act.exit === 'up') || (act.entry === 'right' && act.exit === 'left')) {
-                ctx.lineTo(end[0], end[1]);
-            } else { ctx.lineTo(center[0], center[1]); ctx.lineTo(end[0], end[1]); }
-            ctx.stroke();
-            const [ex, ey] = end;
-            ctx.beginPath();
-            if (act.exit === 'up') { ctx.moveTo(ex-5, ey+5); ctx.lineTo(ex, ey); ctx.lineTo(ex+5, ey+5); }
-            else if (act.exit === 'down') { ctx.moveTo(ex-5, ey-5); ctx.lineTo(ex, ey); ctx.lineTo(ex+5, ey-5); }
-            else if (act.exit === 'left') { ctx.moveTo(ex+5, ey-5); ctx.lineTo(ex, ey); ctx.lineTo(ex+5, ey+5); }
-            else { ctx.moveTo(ex-5, ey-5); ctx.lineTo(ex, ey); ctx.lineTo(ex-5, ey+5); }
-            ctx.stroke();
+        function renderPolicyGrid(n, policy){
+
+            const container =
+                document.getElementById("policyGrid")
+
+            container.innerHTML = ""
+
+            container.style.gridTemplateColumns =
+                `repeat(${n}, 62px)`
+
+            let count = 0
+
+            for(let r=0;r<n;r++){
+
+                for(let c=0;c<n;c++){
+
+                    const cell =
+                        document.createElement("div")
+
+                    cell.className = "cell"
+
+                    if(count === startIdx){
+                        cell.classList.add("start")
+                    }
+
+                    if(count === goalIdx){
+                        cell.classList.add("goal")
+                    }
+
+                    if(obstacles.includes(count)){
+                        cell.classList.add("obstacle")
+                    }
+
+                    if(!obstacles.includes(count)){
+
+                        cell.innerHTML = `
+                            ${policy[r][c]}
+                        `
+                    }
+
+                    container.appendChild(cell)
+
+                    count++
+                }
+            }
         }
+
     </script>
+
 </body>
+
 </html>
